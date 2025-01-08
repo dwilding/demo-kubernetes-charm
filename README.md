@@ -1,2 +1,9 @@
-# kubernetes-charm-demo
-Minimal demo of how to write a functional Kubernetes charm
+# Work in progress…
+
+## 0-initial-charm
+
+Comes from:
+
+```
+charmcraft init --profile kubernetes
+```
