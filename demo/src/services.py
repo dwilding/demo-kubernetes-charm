@@ -33,5 +33,6 @@ class DemoServices:
     #       We might contact the service (via localhost) to get its version/status
     #
     #       BUT, suppose we want to push a new config file for a service...
-    #       Can we use pebble.push() from within this module?
-    #       Or would we need to use self._pebble.push() in charm.py
+    #       Can we use pebble.push() from within this module? Would we even want to do that?
+    #       Would we be better to have this module build the service config,
+    #       then charm.py uses self._pebble.push() - similarly to how we handle the layer spec
