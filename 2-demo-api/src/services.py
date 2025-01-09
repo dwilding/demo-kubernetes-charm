@@ -13,7 +13,7 @@ class DemoServer:
         # TODO: What might we typically do here?
 
     @property
-    def _pebble_layer(self) -> pebble.Layer:
+    def pebble_layer(self) -> pebble.Layer:
         pass
         # TODO: Return the layer
 

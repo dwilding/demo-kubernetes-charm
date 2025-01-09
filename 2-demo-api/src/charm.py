@@ -29,7 +29,7 @@ class DemoServerCharm(ops.CharmBase):
     def _on_pebble_ready(self, event: ops.PebbleReadyEvent):
         """Handle pebble-ready event."""
 
-        self._pebble.add_layer("demo-server", self._services._pebble_layer, combine=True)
+        self._pebble.add_layer("demo-server", self._services.pebble_layer, combine=True)
         self._pebble.replan()
 
         self.unit.status = ops.ActiveStatus()
