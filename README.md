@@ -3,8 +3,8 @@
 ## Step 1
 
 ```sh
-mkdir demo-api # The name of the dir is important, as it will be included in the charm metadata
-cd demo-api
+mkdir demo-server # The name of the dir is important, as it will be included in the charm metadata
+cd demo-server
 charmcraft init --profile kubernetes
 ```
 
@@ -12,7 +12,7 @@ charmcraft init --profile kubernetes
 
 In _charmcraft.yaml_:
 
-  - Change `title` from `Charm Template` to `Demo API`
+  - Change `title` from `Charm Template` to `Demo Server`
 
   - After the `bases` block, add:
 
