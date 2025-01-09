@@ -8,10 +8,10 @@ Avoid using this README file for information that is maintained or published els
 Use links instead.
 -->
 
-# charm
+# demo-api
 
 Charmhub package name: operator-template
-More information: https://charmhub.io/charm
+More information: https://charmhub.io/demo-api
 
 Describe your charm in one or two sentences.
 

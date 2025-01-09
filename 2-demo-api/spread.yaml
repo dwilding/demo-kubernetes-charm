@@ -1,4 +1,4 @@
-project: charm-k8s-tests
+project: demo-api-k8s-tests
 
 environment:
   PROVIDER: microk8s

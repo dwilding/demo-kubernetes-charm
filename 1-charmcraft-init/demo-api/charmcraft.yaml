@@ -2,7 +2,7 @@
 # See https://juju.is/docs/sdk/charmcraft-config for guidance.
 
 # (Required)
-name: demo-charm
+name: demo-api
 
 
 # (Required)
@@ -10,7 +10,7 @@ type: charm
 
 
 # (Recommended)
-title: Demo Charm
+title: Charm Template
 
 
 # (Required)
@@ -38,12 +38,6 @@ bases:
       channel: "22.04"
 
 
-# (Optional, but recommended for Kubernetes charms)
-assumes:
-  - juju >= 3.6
-  - k8s-api
-
-
 # (Optional) Configuration options for the charm
 # This config section defines charm config options, and populates the Configure
 # tab on Charmhub.
@@ -66,18 +60,18 @@ config:
 
 # Your workload’s containers.
 containers:
-  demo-container:
-    resource: demo-container-image
+  some-container:
+    resource: some-container-image
 
 
 # This field populates the Resources tab on Charmhub.
 resources:
-# An OCI image resource for each container listed above.
-# You may remove this if your charm will run without a workload sidecar container.
-demo-container-image:
+  # An OCI image resource for each container listed above.
+  # You may remove this if your charm will run without a workload sidecar container.
+  some-container-image:
     type: oci-image
-    description: OCI image for the 'demo-container' container
+    description: OCI image for the 'some-container' container
     # The upstream-source field is ignored by Juju. It is included here as a reference
     # so the integration testing suite knows which image to deploy during testing. This field
     # is also used by the 'canonical/charming-actions' Github action for automated releasing.
-    upstream-source: workload-repo/container-image:tag
+    upstream-source: some-repo/some-image:some-tag

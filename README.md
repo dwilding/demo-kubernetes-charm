@@ -1,20 +1,18 @@
 # Work in progress…
 
-## 0-initial-charm
+## Step 1
 
-Comes from:
-
-```
+```sh
+mkdir demo-api # The name of the dir is important, as it will be included in the charm metadata
+cd demo-api
 charmcraft init --profile kubernetes
 ```
 
-## 1-better-initial-charm
+## Step 2
 
 In _charmcraft.yaml_:
 
-  - Set `name` to `demo-charm`
-
-  - Set `title` to `Demo Charm`
+  - Change `title` from `Charm Template` to `Demo API`
 
   - After the `bases` block, add:
 
@@ -39,15 +37,15 @@ In _charmcraft.yaml_:
     ```yaml
     # This field populates the Resources tab on Charmhub.
     resources:
-    # An OCI image resource for each container listed above.
-    # You may remove this if your charm will run without a workload sidecar container.
-    demo-container-image:
+      # An OCI image resource for each container listed above.
+      # You may remove this if your charm will run without a workload sidecar container.
+      demo-container-image:
         type: oci-image
         description: OCI image for the 'demo-container' container
         # The upstream-source field is ignored by Juju. It is included here as a reference
         # so the integration testing suite knows which image to deploy during testing. This field
         # is also used by the 'canonical/charming-actions' Github action for automated releasing.
-        upstream-source: workload-repo/container-image:tag
+        upstream-source: some-repo/some-image:some-tag
     ```
 
 In _src/charm.py_:

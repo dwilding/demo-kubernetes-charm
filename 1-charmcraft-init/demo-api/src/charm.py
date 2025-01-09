@@ -11,7 +11,7 @@ import ops
 logger = logging.getLogger(__name__)
 
 
-class CharmCharm(ops.CharmBase):
+class DemoApiCharm(ops.CharmBase):
     """Charm the application."""
 
     def __init__(self, framework: ops.Framework):
@@ -24,4 +24,4 @@ class CharmCharm(ops.CharmBase):
 
 
 if __name__ == "__main__":  # pragma: nocover
-    ops.main(CharmCharm)  # type: ignore
+    ops.main(DemoApiCharm)  # type: ignore
