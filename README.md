@@ -74,7 +74,7 @@ charm.py         Container
 ▲               ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 │               ┃ Service manager                 ┃
 │               ┃ (self._pebble / event.workload) ┃
-└─ services.py  ┠─────────────────────────────────┨
+└─ services.py  ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
                 ┃ Service 1                       ┃
                 ┃ Service 2 and so on…            ┃
                 ┃ (self._services)                ┃
