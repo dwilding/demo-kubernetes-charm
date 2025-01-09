@@ -72,7 +72,7 @@ Unit (self.unit)
 ═══════════════════════════════════════════════════
 charm.py         Container                         
 ▲               ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-│               ┃ Service manager                 ┃                                                 
+│               ┃ Service manager                 ┃
 │               ┃ (self._pebble / event.workload) ┃
 └─ services.py  ┠─────────────────────────────────┨
                 ┃ Service 1                       ┃
