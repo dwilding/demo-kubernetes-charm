@@ -68,15 +68,16 @@ TODO: In _requirements.txt_, does `ops ~= 2.8` need changing?
 ## An artistic interlude
 
 ```
-Unit (self.unit)
-═══════════════════════════════════════════════════
-charm.py         Container                         
-▲               ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-│               ┃ Service manager                 ┃
-│               ┃ (self._pebble / event.workload) ┃
-└─ services.py  ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
-                ┃ Service 1                       ┃
-                ┃ Service 2 and so on…            ┃
-                ┃ (self._services)                ┃
-                ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+ Unit (self.unit)
+═══════════════════════════════════════════════════════
+                                                       
+ Charm container     Workload container                
+━━━━━━━━━━━━━━━━┓   ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+ charm.py       ┃   ┃ Service manager                 ┃
+ ▲              ┃   ┃ (self._pebble / event.workload) ┃
+ └─ services.py ┃   ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+━━━━━━━━━━━━━━━━┛   ┃ Service 1                       ┃
+                    ┃ Service 2 and so on…            ┃
+                    ┃ (self._services)                ┃
+                    ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
