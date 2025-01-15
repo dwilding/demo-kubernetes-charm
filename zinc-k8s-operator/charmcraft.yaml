@@ -1,0 +1,50 @@
+name: zinc-k8s
+
+summary: |
+  Demo of how to write a Kubernetes charm for Zinc
+
+description: |
+  Adapted from https://github.com/jnsgruk/zinc-k8s-operator and https://github.com/operatorinc/zinc-k8s-operator.
+
+type: charm
+
+assumes:
+  - juju >= 3.6
+  - k8s-api
+
+bases:
+  - build-on:
+    - name: ubuntu
+      channel: "22.04"
+    run-on:
+    - name: ubuntu
+      channel: "22.04"
+
+peers:
+  zinc-peers:
+    interface: zinc_peers
+
+actions:
+  get-admin-password:
+    description: |
+      Get the initial admin password for Zinc. This is generated at charm deployment time. If the
+      password has been changed using the Zinc UI/API, this will not be valid.
+
+containers:
+  zinc:
+    resource: zinc-image
+    mounts:
+      - storage: data
+        location: /var/lib/zincsearch
+
+resources:
+  zinc-image:
+    type: oci-image
+    description: OCI image for zinc
+    # Included for simplicity in integration tests
+    upstream-source: ghcr.io/jnsgruk/zinc:0.4.10
+
+storage:
+  data:
+    type: filesystem
+    location: /zinc-data
