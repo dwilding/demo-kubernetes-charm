@@ -1,7 +1,7 @@
 ```host
 multipass launch --cpus 4 --disk 50G --memory 4G --name zinc-vm 24.04
 mulitpass stop zinc-vm
-multipass mount --type native ~/workspace/zinc-vm-250114 zinc-vm:~/outside
+multipass mount --type native ~/repos/dwilding/demo-kubernetes-charm zinc-vm:~/repo
 multipass start zinc-vm
 multipass shell zinc-vm
 ```
@@ -24,23 +24,24 @@ juju add-model development
 ```
 
 ```host
-cd ~/workspace/zinc-vm-250114
+cd ~/repos/dwilding/demo-kubernetes-charm
 git clone https://github.com/operatorinc/zinc-k8s-operator.git
 ```
 
 ```zinc-vm
-cd ~/outside/zinc-k8s-operator
+cd ~/repo/zinc-k8s-operator
 charmcraft pack # charmcraft internal error: PermissionError(13, 'Permission denied')
 ```
 
 Trying this instead...
 
 ```host
-cd ~/workspace/zinc-vm-250114
+~/repos/dwilding/demo-kubernetes-charm/zinc-k8s-operator
 charmcraft pack
 ```
 
 ```zinc-vm
+cd ~/repo/zinc-k8s-operator
 juju deploy ./zinc-k8s_ubuntu-22.04-amd64.charm --resource zinc-image=ghcr.io/jnsgruk/zinc:0.4.10
 juju status --watch 1s
 # Wait for active idle
