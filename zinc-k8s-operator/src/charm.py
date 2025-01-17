@@ -1,54 +1,14 @@
 #!/usr/bin/env python3
 
 import logging
+import secrets
 
 import ops
-
-from zinc import ZincConfig, Zinc
+import zinc
 
 
 logger = logging.getLogger(__name__)
-
-
-class ZincWorkload():
-    """Represents Zinc inside its container."""
-
-    def __init__(self, config: ZincConfig):
-        self.config = config
-        self.zinc = Zinc(config) # Zinc with no charming context
-
-    @property
-    def command(self) -> str:
-        # go-runner achieves the equivalent of:`bash -c '/bin/zinc | tee PATH'`, but
-        # without including bash etc. in the image.
-        return "/bin/go-runner --log-file=/var/lib/zincsearch/zinc.log --also-stdout=true --redirect-stderr=true /bin/zincsearch"
-
-    @property
-    def pebble_layer(self) -> ops.pebble.Layer:
-        if not self.config.admin_password:
-            raise RuntimeError("Initial admin password is empty")
-        layer: ops.pebble.LayerDict = {
-            "summary": "Zinc service",
-            "description": "Pebble layer that specifies how to run Zinc",
-            "services": {
-                "zinc": {
-                    "override": "replace",
-                    "summary": "zinc",
-                    "command": self.command,
-                    "startup": "enabled",
-                    "environment": {
-                        "ZINC_DATA_PATH": "/var/lib/zincsearch",
-                        "ZINC_FIRST_ADMIN_USER": self.config.admin_user,
-                        "ZINC_FIRST_ADMIN_PASSWORD": self.config.admin_password,
-                    },
-                },
-            },
-        }
-        return ops.pebble.Layer(layer)
-
-    @property
-    def version(self) -> str:
-        return self.zinc.version
+# TODO: Add logging statements
 
 
 class ZincCharm(ops.CharmBase):
@@ -62,42 +22,89 @@ class ZincCharm(ops.CharmBase):
             self.on.get_admin_password_action,
             self._on_get_admin_password
         )
-        self._pebble = self.unit.get_container("zinc") # For managing the container
+        self._pebble = self.unit.get_container("zinc") # For managing the workload container
+        self._zinc_config = {
+            "port": 4080,
+            "admin_user": "admin",
+            "admin_password": secrets.token_urlsafe(24),
+        }
+        self._zinc = zinc.ZincAPI(self._zinc_config["port"]) # For interacting with Zinc over HTTP
 
     def _on_zinc_pebble_ready(self, event: ops.PebbleReadyEvent):
-        """Configure Zinc and use Pebble to start Zinc."""
-        # Configure Zinc
-        config = ZincConfig()
-        if not self._update_config_from_peer_relation(config):
+        """Use Pebble to start Zinc."""
+        self.unit.status = ops.MaintenanceStatus("configuring Zinc container")
+        if not self._update_zinc_config_from_peer_relation():
             if self.unit.is_leader():
-                config.generate_admin_password()
-                self._update_peer_relation_from_config(config)
+                self._update_peer_relation_from_zinc_config()
             else:
-                event.defer() # Wait for the leader put Zinc config in the peer relation
+                event.defer() # Wait for the leader to put Zinc config in the peer relation
                 return
-        zinc = ZincWorkload(config)
-        # Use Pebble to start Zinc
-        self._pebble.add_layer("zinc", zinc.pebble_layer, combine=True)
+        self._add_pebble_layer()
         self._pebble.replan()
+        try:
+            version = self._zinc.get_version()
+        except RuntimeError as e:
+            self.unit.status = ops.BlockedStatus(str(e))
+            # TODO: Should we call event.defer() here?
+            return
+        self.unit.set_workload_version(version)
+        self.unit.status = ops.ActiveStatus()
+        # Open the port so that we can interact with Zinc from outside the pod
         self.unit.open_port(
             protocol="tcp",
-            port=config.port
+            port=self._zinc_config["port"]
         )
-        self.unit.status = ops.ActiveStatus()
-        self.unit.set_workload_version(zinc.version)
+
+    def _add_pebble_layer(self):
+        # The OCI image for Zinc only has two binaries: zincsearch and go-runner
+        # We'll use go-runner to achieve the equivalent of `bash -c '/bin/zincsearch | tee PATH'`
+        # Testing only: To simulate a slow startup, we'll sleep for a few seconds before running zincsearch
+        command = "/bin/dash -c '/bin/sleep 7 && /bin/go-runner --log-file=/var/lib/zincsearch/zinc.log --also-stdout=true --redirect-stderr=true /bin/zincsearch'"
+        # This requires dash and sleep binaries to be injected into the Zinc container - don't do this in prod!
+        self._push_binary_to_container("dash")
+        self._push_binary_to_container("sleep")
+        # Define a pebble layer and add it to the workload container
+        layer: ops.pebble.LayerDict = {
+            "summary": "Zinc service",
+            "description": "Pebble layer that specifies how to run Zinc",
+            "services": {
+                "zinc": {
+                    "override": "replace",
+                    "summary": "zinc",
+                    "command": command,
+                    "startup": "enabled",
+                    "environment": {
+                        "ZINC_DATA_PATH": "/var/lib/zincsearch",
+                        "ZINC_FIRST_ADMIN_USER": self._zinc_config["admin_user"],
+                        "ZINC_FIRST_ADMIN_PASSWORD": self._zinc_config["admin_password"],
+                    },
+                },
+            },
+        }
+        self._pebble.add_layer("zinc", layer, combine=True)
+
+    def _push_binary_to_container(self, name: str):
+        with open(f"/bin/{name}", "rb") as file:
+            file_bytes = file.read()
+        self._pebble.push(
+            f"/bin/{name}",
+            file_bytes,
+            user_id=0,
+            group_id=0,
+            permissions=0o755
+        )
 
     def _on_get_admin_password(self, event: ops.ActionEvent):
         """Return the initial admin password as an action response."""
-        config = ZincConfig()
-        if not self._update_config_from_peer_relation(config):
-            event.defer() # TODO: Does it make sense to defer this event?
+        if not self._update_zinc_config_from_peer_relation():
+            event.defer() # TODO: Change this
             return
         event.set_results({
-            "admin-password": config.admin_password
+            "admin-password": self._zinc_config["admin_password"]
         })
 
-    def _update_config_from_peer_relation(self, config: ZincConfig) -> bool:
-        """Get the initial admin password from the peer relation, then configure Zinc."""
+    def _update_zinc_config_from_peer_relation(self) -> bool:
+        """Fetch the initial admin password from the peer relation."""
         relation = self.model.get_relation("zinc-peers")
         if not relation:
             return False # Relation not ready
@@ -105,16 +112,16 @@ class ZincCharm(ops.CharmBase):
         if not secret_id:
             return False # Secret not available
         secret = self.model.get_secret(id=secret_id)
-        config.admin_password = secret.peek_content()["password"]
+        self._zinc_config["admin_password"] = secret.peek_content()["password"]
         return True
 
-    def _update_peer_relation_from_config(self, config: ZincConfig) -> bool:
-        """Set the initial admin password in the peer relation, based on Zinc config."""
+    def _update_peer_relation_from_zinc_config(self) -> bool:
+        """Store the initial admin password in the peer relation."""
         relation = self.model.get_relation("zinc-peers")
         if not relation:
             return False # Relation not ready
         secret = self.app.add_secret({
-            "password": config.admin_password
+            "password": self._zinc_config["admin_password"]
         })
         relation.data[self.app]["admin-password"] = secret.id
         return True

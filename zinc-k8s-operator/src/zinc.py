@@ -1,37 +1,39 @@
-"""A standalone module for managing Zinc, with no charming context."""
-
-from dataclasses import dataclass
+"""Standalone module for interacting with Zinc, with no charming context."""
 
 import logging
-import secrets
 import requests
+import time
 
 
 logger = logging.getLogger(__name__)
+# TODO: Add logging statements
 
 
-@dataclass
-class ZincConfig:
-    """Represents a configuration of Zinc"""
-    port: int = 4080
-    admin_user: str = "admin"
-    admin_password: str = ""
+class ZincAPI:
+    """Client for interacting with Zinc over HTTP."""
+    def __init__(self, port: int):
+        self.port = port
 
-    def generate_admin_password(self):
-        self.admin_password = secrets.token_urlsafe(24)
-
-
-class Zinc:
-    """Represents a configured & running instance of Zinc."""
-    def __init__(self, config: ZincConfig):
-        self.config = config
-
-    @property
-    def version(self) -> str:
-        response = requests.get(
-            f"http://localhost:{self.config.port}/version",
-            timeout=10
-        )
-        response_dict = response.json()
+    def get_version(self) -> str:
+        try:
+            response = self._get_with_retry(f"http://localhost:{self.port}/version")
+        except requests.exceptions.RequestException:
+            raise RuntimeError("unable to get version from Zinc")
+        try:
+            response_dict = response.json()
+        except requests.exceptions.JSONDecodeError:
+            raise RuntimeError("received invalid version from Zinc")
         version = response_dict["version"].strip("'") # Version is double quoted for some reason
         return version
+
+    def _get_with_retry(self, url: str) -> requests.Response:
+        wait_interval = 5 # wait 5 seconds between attempts
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                return requests.get(url, timeout=wait_interval)
+            except requests.exceptions.ConnectionError:
+                time.sleep(wait_interval)
+            except requests.exceptions.Timeout:
+                continue
+        raise requests.exceptions.RequestException("no response from Zinc")
