@@ -45,7 +45,10 @@ class ZincCharm(ops.CharmBase):
             version = self._zinc.get_version()
         except RuntimeError as e:
             self.unit.status = ops.BlockedStatus(str(e))
-            # TODO: Should we call event.defer() here?
+            # TODO: Does it make sense to use a RuntimeError to signal that we couldn't get the version?
+            #       Is "blocked" the most appropriate status to use here?
+            #       Should we call event.defer() here?
+            #       If the workload needs a bit more time, get_version() might not fail next time
             return
         self.unit.set_workload_version(version)
         self.unit.status = ops.ActiveStatus()
