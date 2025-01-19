@@ -90,34 +90,26 @@ admin-password: KF3lLSbygt1fxL0CDKZLP_RqCAWAC52X
 ```
 
 
-Debugging/testing:
+For debugging/testing, list binaries in the workload container of unit 0
 
-```sh
-# SSH into the charm container
-juju ssh zinc-k8s/0
+```
+$ ./pebble.sh 0 ls /bin
+go-runner
+zincsearch
 ```
 
-In the charm container:
-```sh
-cd /usr/local/bin
-echo '#!/bin/sh' > peb
-echo 'PEBBLE_SOCKET=/charm/containers/zinc/pebble.socket /charm/bin/pebble "$@"' >> peb
-chmod +x peb
+Push `dash` and `sleep` from the charm container to the workload container
+```
+$ ./pebble.sh 0 push /bin/dash /bin/dash
+$ ./pebble.sh 0 push /bin/sleep /bin/sleep
+$ ./pebble.sh 0 ls /bin
+dash
+go-runner
+sleep
+zincsearch
 ```
 
-List binaries in the workload container:
-```sh
-peb ls /bin
-```
-Outputs: `go-runner, zincsearch`
-
-Push `sleep` into the workload container:
-```sh
-peb push /bin/sleep /bin/sleep
-```
-
-
-In the charm code:
+Or at charm runtime:
 
 ```py
     # Testing only: To simulate a slow startup, we'll sleep for a few seconds before running zincsearch
@@ -136,5 +128,5 @@ def _push_binary_to_container(self, name: str):
         group_id=0,
         permissions=0o755
     )
-    # TODO: Why doesn't self._pebble.push_path() work? I get permission errors
+    # TODO: Why doesn't self._pebble.push_path() work? Becuase it's not running as root?
 ```
