@@ -53,16 +53,12 @@ class ZincCharm(ops.CharmBase):
         self.unit.open_port(
             protocol="tcp",
             port=self._zinc_config["port"]
-        )
+        ) # TODO: Why doesn't `juju status` list the opened port for the unit?
 
     def _add_pebble_layer(self):
         # The OCI image for Zinc only has two binaries: zincsearch and go-runner
         # We'll use go-runner to achieve the equivalent of `bash -c '/bin/zincsearch | tee PATH'`
-        # Testing only: To simulate a slow startup, we'll sleep for a few seconds before running zincsearch
-        command = "/bin/dash -c '/bin/sleep 7 && /bin/go-runner --log-file=/var/lib/zincsearch/zinc.log --also-stdout=true --redirect-stderr=true /bin/zincsearch'"
-        # This requires dash and sleep binaries to be injected into the Zinc container - don't do this in prod!
-        self._push_binary_to_container("dash")
-        self._push_binary_to_container("sleep")
+        command = "/bin/go-runner --log-file=/var/lib/zincsearch/zinc.log --also-stdout=true --redirect-stderr=true /bin/zincsearch"
         # Define a pebble layer and add it to the workload container
         layer: ops.pebble.LayerDict = {
             "summary": "Zinc service",
@@ -82,17 +78,6 @@ class ZincCharm(ops.CharmBase):
             },
         }
         self._pebble.add_layer("zinc", layer, combine=True)
-
-    def _push_binary_to_container(self, name: str):
-        with open(f"/bin/{name}", "rb") as file:
-            file_bytes = file.read()
-        self._pebble.push(
-            f"/bin/{name}",
-            file_bytes,
-            user_id=0,
-            group_id=0,
-            permissions=0o755
-        )
 
     def _on_get_admin_password(self, event: ops.ActionEvent):
         """Return the initial admin password as an action response."""

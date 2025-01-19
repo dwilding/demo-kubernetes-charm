@@ -88,3 +88,53 @@ zinc-k8s/1   active    idle   10.1.107.97
 $ juju run zinc-k8s/1 get-admin-password
 admin-password: KF3lLSbygt1fxL0CDKZLP_RqCAWAC52X
 ```
+
+
+Debugging/testing:
+
+```sh
+# SSH into the charm container
+juju ssh zinc-k8s/0
+```
+
+In the charm container:
+```sh
+cd /usr/local/bin
+echo '#!/bin/sh' > peb
+echo 'PEBBLE_SOCKET=/charm/containers/zinc/pebble.socket /charm/bin/pebble "$@"' >> peb
+chmod +x peb
+```
+
+List binaries in the workload container:
+```sh
+peb ls /bin
+```
+Outputs: `go-runner, zincsearch`
+
+Push `sleep` into the workload container:
+```sh
+peb push /bin/sleep /bin/sleep
+```
+
+
+In the charm code:
+
+```py
+    # Testing only: To simulate a slow startup, we'll sleep for a few seconds before running zincsearch
+    command = "/bin/dash -c '/bin/sleep 7 && /bin/go-runner --log-file=/var/lib/zincsearch/zinc.log --also-stdout=true --redirect-stderr=true /bin/zincsearch'"
+    # This requires dash and sleep binaries to be injected into the Zinc container - don't do this in prod!
+    self._push_binary_to_container("dash")
+    self._push_binary_to_container("sleep")
+
+def _push_binary_to_container(self, name: str):
+    with open(f"/bin/{name}", "rb") as file:
+        file_bytes = file.read()
+    self._pebble.push(
+        f"/bin/{name}",
+        file_bytes,
+        user_id=0,
+        group_id=0,
+        permissions=0o755
+    )
+    # TODO: Why doesn't self._pebble.push_path() work? I get permission errors
+```
