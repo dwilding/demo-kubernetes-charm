@@ -41,15 +41,7 @@ class ZincCharm(ops.CharmBase):
                 return
         self._add_pebble_layer()
         self._pebble.replan()
-        try:
-            version = self._zinc.get_version()
-        except RuntimeError as e:
-            self.unit.status = ops.BlockedStatus(str(e))
-            # TODO: Does it make sense to use a RuntimeError to signal that we couldn't get the version?
-            #       Is "blocked" the most appropriate status to use here?
-            #       Should we call event.defer() here?
-            #       If the workload needs a bit more time, get_version() might not fail next time
-            return
+        version = self._zinc.get_version()
         self.unit.set_workload_version(version)
         self.unit.status = ops.ActiveStatus()
         # Open the port so that we can interact with Zinc from outside the pod
