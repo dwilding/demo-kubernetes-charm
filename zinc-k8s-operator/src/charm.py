@@ -15,7 +15,11 @@ class ZincCharm(ops.CharmBase):
     def __init__(self, framework: ops.Framework):
         super().__init__(framework)
         framework.observe(
-            self.on.zinc_pebble_ready,
+            self.on.collect_unit_status,
+            self._on_collect_unit_status
+        )
+        framework.observe(
+            self.on["zinc"].pebble_ready,
             self._on_zinc_pebble_ready
         )
         framework.observe(
@@ -29,26 +33,6 @@ class ZincCharm(ops.CharmBase):
             "admin_password": secrets.token_urlsafe(24),
         }
         self._zinc = zinc.ZincAPI(self._zinc_config["port"]) # For interacting with Zinc over HTTP
-
-    def _on_zinc_pebble_ready(self, event: ops.PebbleReadyEvent):
-        """Use Pebble to start Zinc."""
-        self.unit.status = ops.MaintenanceStatus("configuring Zinc container")
-        if not self._update_zinc_config_from_peer_relation():
-            if self.unit.is_leader():
-                self._update_peer_relation_from_zinc_config()
-            else:
-                event.defer() # Wait for the leader to put Zinc config in the peer relation
-                return
-        self._add_pebble_layer()
-        self._pebble.replan()
-        version = self._zinc.get_version()
-        self.unit.set_workload_version(version)
-        self.unit.status = ops.ActiveStatus()
-        # Open the port so that we can interact with Zinc from outside the pod
-        self.unit.open_port(
-            protocol="tcp",
-            port=self._zinc_config["port"]
-        ) # TODO: Why doesn't `juju status` list the opened port for the unit?
 
     def _add_pebble_layer(self):
         # The OCI image for Zinc only has two binaries: zincsearch and go-runner
@@ -74,10 +58,40 @@ class ZincCharm(ops.CharmBase):
         }
         self._pebble.add_layer("zinc", layer, combine=True)
 
+    def _on_collect_unit_status(self, event: ops.CollectStatusEvent):
+        try:
+            service_info = self._pebble.get_service("zinc")
+        except (ops.pebble.APIError, ops.ModelError):
+            event.add_status(
+                ops.MaintenanceStatus("waiting for Pebble to be ready")
+            )
+            return
+        if not service_info.is_running():
+            event.add_status(
+                ops.MaintenanceStatus("waiting for Zinc to be ready")
+            )
+            return
+        # Zinc didn't exit on startup, but it might not be ready yet, so probe its API
+        version = self._zinc.get_version() # Includes retry logic in case of slow startup
+        self.unit.set_workload_version(version)
+        event.add_status(ops.ActiveStatus()) # Zinc is ready
+
+    def _on_zinc_pebble_ready(self, event: ops.PebbleReadyEvent):
+        """Use Pebble to start Zinc."""
+        self.unit.status = ops.MaintenanceStatus("waiting for Zinc to be ready")
+        if not self._update_zinc_config_from_peer_relation():
+            if self.unit.is_leader():
+                self._update_peer_relation_from_zinc_config()
+            else:
+                event.defer() # Wait for the leader to put Zinc config in the peer relation
+                return
+        self._add_pebble_layer()
+        self._pebble.replan()
+
     def _on_get_admin_password(self, event: ops.ActionEvent):
         """Return the initial admin password as an action response."""
         if not self._update_zinc_config_from_peer_relation():
-            event.defer() # TODO: Change this
+            event.fail("admin password is not available")
             return
         event.set_results({
             "admin-password": self._zinc_config["admin_password"]
