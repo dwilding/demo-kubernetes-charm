@@ -51,7 +51,7 @@ class ZincCharm(ops.CharmBase):
                 # TODO: Should we return BlockedStatus instead?
                 #       To inspect failing checks, the admin could run:
                 #       ```
-                #       juju exec --unit <unit> -- PEBBLE_SOCKET=/charm/containers/zinc/pebble.socket \
+                #       juju exec --unit=<unit> -- PEBBLE_SOCKET=/charm/containers/zinc/pebble.socket \
                 #       /charm/bin/pebble checks --level=ready
                 #       ```
                 #       The command needs to be like this because the OCI image for Zinc has
