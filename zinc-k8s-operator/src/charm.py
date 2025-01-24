@@ -51,11 +51,11 @@ class ZincCharm(ops.CharmBase):
                 # TODO: Should we return BlockedStatus instead?
                 #       To inspect failing checks, the admin could run:
                 #       ```
-                #       juju exec --unit=<unit> -- PEBBLE_SOCKET=/charm/containers/zinc/pebble.socket \
-                #       /charm/bin/pebble checks --level=ready
+                #       juju ssh <unit> PEBBLE_SOCKET=/charm/containers/zinc/pebble.socket \
+                #       /charm/bin/pebble checks --level ready
                 #       ```
                 #       The command needs to be like this because the OCI image for Zinc has
-                #       no shell binaries (so juju can't ssh/exec in the workload container).
+                #       no shell binaries (so `juju ssh --container zinc <unit> ...` won't work).
         return ops.ActiveStatus()
 
     def _on_zinc_pebble_ready(self, event: ops.PebbleReadyEvent):
